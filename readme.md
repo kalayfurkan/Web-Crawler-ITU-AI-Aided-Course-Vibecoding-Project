@@ -16,7 +16,7 @@ A Python-based web crawler and real-time search engine built with **Flask** and 
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/<your-username>/crawler.git
+git clone https://github.com/kalayfurkan/Web-Crawler-ITU-AI-Aided-Course-Vibecoding-Project.git
 cd crawler
 
 # 2. Install dependencies
