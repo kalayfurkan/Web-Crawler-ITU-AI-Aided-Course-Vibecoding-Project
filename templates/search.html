@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Search — Web Crawler{% endblock %}
+
+{% block content %}
+<h1>&#128269; Search Indexed Pages</h1>
+
+<div class="card">
+    <div style="display:flex; gap:.8rem; flex-wrap:wrap;">
+        <input type="text" id="queryInput" placeholder="Enter search query…"
+               style="flex:1; min-width:200px;" autofocus>
+        <select id="sortBy" style="width:160px;">
+            <option value="relevance">Sort: Relevance</option>
+            <option value="depth">Sort: Depth</option>
+            <option value="frequency">Sort: Frequency</option>
+        </select>
+        <button class="btn btn-primary" onclick="doSearch()">Search</button>
+        <button class="btn btn-outline" onclick="feelingLucky()" title="Go directly to the top result">I'm Feeling Lucky</button>
+    </div>
+</div>
+
+<!-- results area -->
+<div id="resultsInfo" class="mt-2" style="display:none;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span class="text-dim text-sm" id="resultsMeta"></span>
+        <span class="mono text-neon text-sm" id="resultsCount"></span>
+    </div>
+</div>
+
+<div id="resultsList" class="mt-2"></div>
+
+<div id="pagination" class="mt-2" style="display:none; text-align:center; gap:.5rem;">
+    <button class="btn btn-outline btn-sm" id="prevBtn" onclick="changePage(-1)">Previous</button>
+    <span class="mono text-sm" id="pageInfo" style="margin:0 1rem;"></span>
+    <button class="btn btn-outline btn-sm" id="nextBtn" onclick="changePage(1)">Next</button>
+</div>
+
+<div id="emptyState" class="card empty-state mt-2">
+    <p class="text-dim">Enter a search query above to find indexed pages.</p>
+    <p class="text-dim text-sm mt-1">API: GET /search?query=&lt;word&gt;&amp;sortBy=relevance</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentPage = 1;
+const perPage = 20;
+
+document.getElementById('queryInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') doSearch();
+});
+
+async function doSearch(page) {
+    const query = document.getElementById('queryInput').value.trim();
+    if (!query) return;
+    currentPage = page || 1;
+    const sortBy = document.getElementById('sortBy').value;
+
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('resultsList').innerHTML = '<p class="text-dim">Searching…</p>';
+
+    try {
+        const url = '/search?query=' + encodeURIComponent(query) +
+                    '&sortBy=' + sortBy +
+                    '&page=' + currentPage +
+                    '&per_page=' + perPage;
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        renderResults(data);
+    } catch(e) {
+        document.getElementById('resultsList').innerHTML =
+            '<p style="color:var(--red)">Search failed: ' + e.message + '</p>';
+    }
+}
+
+function renderResults(data) {
+    const list = document.getElementById('resultsList');
+    const info = document.getElementById('resultsInfo');
+    const pag = document.getElementById('pagination');
+
+    if (!data.results || data.results.length === 0) {
+        list.innerHTML = '<div class="card empty-state"><p class="text-dim">No results found.</p></div>';
+        info.style.display = 'none';
+        pag.style.display = 'none';
+        return;
+    }
+
+    info.style.display = 'flex';
+    document.getElementById('resultsMeta').textContent =
+        'Query: "' + data.query + '" | Sorted by: ' + data.sort_by;
+    document.getElementById('resultsCount').textContent =
+        data.total_results + ' result' + (data.total_results !== 1 ? 's' : '');
+
+    let html = '';
+    data.results.forEach(function(r, i) {
+        const rank = (currentPage - 1) * perPage + i + 1;
+        html += '<div class="result-item">' +
+            '<div style="display:flex;justify-content:space-between;align-items:baseline;">' +
+            '<div class="result-url">#' + rank + ' <a href="' + r.relevant_url + '" target="_blank">' + r.relevant_url + '</a></div>' +
+            '<span class="mono" style="color:var(--neon);font-size:.85rem;">' + r.relevance_score + ' pts</span>' +
+            '</div>' +
+            '<div class="result-meta">' +
+            '<span>Origin: <strong>' + r.origin_url + '</strong></span>' +
+            '<span>Depth: <strong>' + r.depth + '</strong></span>' +
+            '<span>Frequency: <strong>' + r.frequency + '</strong></span>' +
+            '<span>Words: <strong>' + (r.matched_words || []).join(', ') + '</strong></span>' +
+            (r.phrase_frequency > 0
+                ? '<span style="color:var(--neon);font-weight:700;">Exact Phrase: ' + r.phrase_frequency + 'x</span>'
+                : '') +
+            '</div></div>';
+    });
+    list.innerHTML = html;
+
+    // pagination
+    const totalPages = Math.ceil(data.total_results / perPage);
+    if (totalPages > 1) {
+        pag.style.display = 'block';
+        document.getElementById('pageInfo').textContent = 'Page ' + currentPage + ' / ' + totalPages;
+        document.getElementById('prevBtn').disabled = currentPage <= 1;
+        document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+    } else {
+        pag.style.display = 'none';
+    }
+}
+
+function changePage(delta) {
+    doSearch(currentPage + delta);
+}
+
+async function feelingLucky() {
+    const query = document.getElementById('queryInput').value.trim();
+    if (!query) return;
+    const sortBy = document.getElementById('sortBy').value;
+    try {
+        const url = '/search?query=' + encodeURIComponent(query) +
+                    '&sortBy=' + sortBy + '&page=1&per_page=1';
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (data.results && data.results.length > 0) {
+            window.open(data.results[0].relevant_url, '_blank');
+        } else {
+            alert('No results found for "' + query + '"');
+        }
+    } catch(e) {
+        alert('Search failed: ' + e.message);
+    }
+}
+</script>
+{% endblock %}

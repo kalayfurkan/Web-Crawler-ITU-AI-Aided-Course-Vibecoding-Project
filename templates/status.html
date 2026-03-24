@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Status — All Crawl Jobs{% endblock %}
+
+{% block content %}
+<h1>&#128202; Crawl Jobs Overview</h1>
+
+{% if jobs %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="value">{{ jobs | length }}</div>
+        <div class="label">Total Jobs</div>
+    </div>
+    <div class="stat-card">
+        <div class="value">{{ jobs | selectattr('status', 'equalto', 'running') | list | length }}</div>
+        <div class="label">Running</div>
+    </div>
+    <div class="stat-card">
+        <div class="value">{{ jobs | selectattr('status', 'equalto', 'completed') | list | length }}</div>
+        <div class="label">Completed</div>
+    </div>
+    <div class="stat-card">
+        <div class="value">{{ jobs | sum(attribute='pages_crawled') }}</div>
+        <div class="label">Total Pages</div>
+    </div>
+</div>
+
+<div class="card" style="padding:0; overflow-x:auto;">
+    <table>
+        <thead>
+            <tr>
+                <th>Job ID</th>
+                <th>Origin URL</th>
+                <th>Depth</th>
+                <th>Status</th>
+                <th>Crawled</th>
+                <th>Queued</th>
+                <th>Back Pressure</th>
+                <th>Rate</th>
+                <th>Created</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for j in jobs %}
+            <tr>
+                <td class="mono text-sm"><a href="/status/{{ j.id }}">{{ j.id[:16] }}…</a></td>
+                <td><span class="truncate" title="{{ j.origin_url }}">{{ j.origin_url }}</span></td>
+                <td class="mono">{{ j.max_depth }}</td>
+                <td>
+                    <span class="badge badge-{{ j.status }} {% if j.status == 'running' %}pulse{% endif %}">
+                        {{ j.status }}
+                    </span>
+                </td>
+                <td class="mono">{{ j.pages_crawled }}</td>
+                <td class="mono">{{ j.pages_queued }}</td>
+                <td>
+                    {% if j.backpressure_active %}
+                        <span class="badge badge-paused pulse">ACTIVE</span>
+                    {% else %}
+                        <span class="text-dim text-sm">off</span>
+                    {% endif %}
+                </td>
+                <td class="mono text-sm">{{ j.max_rate }}/s</td>
+                <td class="text-sm text-dim">{{ j.created_at }}</td>
+                <td><a href="/status/{{ j.id }}" class="btn btn-outline btn-sm">Details</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card empty-state">
+    <p class="text-dim">No crawl jobs found. <a href="/">Start one</a>.</p>
+</div>
+{% endif %}
+{% endblock %}

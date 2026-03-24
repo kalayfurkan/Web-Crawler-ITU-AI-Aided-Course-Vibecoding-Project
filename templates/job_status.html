@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Job {{ job.id[:16] }} — Status{% endblock %}
+
+{% block content %}
+<h1>&#128270; Job Status</h1>
+
+<!-- status & controls -->
+<div class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+        <div>
+            <span class="badge badge-{{ job.status }} {% if job.status == 'running' %}pulse{% endif %}" style="font-size:.85rem; padding:.25rem .8rem;" id="badgeStatus">
+                {{ job.status | upper }}
+            </span>
+            <span class="mono text-sm text-dim" style="margin-left:.6rem;">{{ job.id }}</span>
+        </div>
+        <div style="display:flex; gap:.5rem;" id="controls">
+            {% if job.status == 'running' %}
+                <button class="btn btn-outline btn-sm" onclick="ctrlAction('pause')">Pause</button>
+                <button class="btn btn-danger btn-sm" onclick="ctrlAction('stop')">Stop</button>
+            {% elif job.status == 'paused' %}
+                <button class="btn btn-primary btn-sm" onclick="ctrlAction('resume')">Resume</button>
+                <button class="btn btn-danger btn-sm" onclick="ctrlAction('stop')">Stop</button>
+            {% elif job.status in ('stopped', 'failed') %}
+                <button class="btn btn-primary btn-sm" onclick="ctrlAction('resume')">Resume</button>
+            {% endif %}
+            {% if job.status not in ('running',) %}
+                <button class="btn btn-danger btn-sm" onclick="deleteJob()">Delete</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mt-2" style="font-size:.88rem;">
+        <div><strong class="text-neon">Origin:</strong> <a href="{{ job.origin_url }}" target="_blank">{{ job.origin_url }}</a></div>
+        <div class="mt-1"><strong class="text-neon">Max Depth:</strong> {{ job.max_depth }} &nbsp;|&nbsp; <strong class="text-neon">Rate Limit:</strong> {{ job.max_rate }} req/s &nbsp;|&nbsp; <strong class="text-neon">Queue Limit:</strong> {{ job.max_queue_depth }} &nbsp;|&nbsp; <strong class="text-neon">Max URLs:</strong> {{ job.max_urls or 'Unlimited' }}</div>
+        <div class="mt-1 text-dim text-sm">Created: {{ job.created_at }} &nbsp;|&nbsp; Updated: {{ job.updated_at }}</div>
+    </div>
+</div>
+
+<!-- stats -->
+<div class="stats-grid" id="statsGrid">
+    <div class="stat-card">
+        <div class="value" id="sCrawled">{{ job.pages_crawled }}</div>
+        <div class="label">Pages Crawled</div>
+    </div>
+    <div class="stat-card">
+        <div class="value" id="sQueued">{{ job.pages_queued }}</div>
+        <div class="label">Total Queued</div>
+    </div>
+    <div class="stat-card">
+        <div class="value" id="sPending">{{ queue_stats.get('pending', 0) }}</div>
+        <div class="label">Pending</div>
+    </div>
+    <div class="stat-card">
+        <div class="value" id="sProcessing">{{ queue_stats.get('processing', 0) }}</div>
+        <div class="label">Processing</div>
+    </div>
+    <div class="stat-card">
+        <div class="value" id="sDone">{{ queue_stats.get('done', 0) }}</div>
+        <div class="label">Done</div>
+    </div>
+    <div class="stat-card">
+        <div class="value" id="sFailed">{{ queue_stats.get('failed', 0) }}</div>
+        <div class="label">Failed</div>
+    </div>
+    <div class="stat-card" id="bpCard">
+        <div class="value" id="sBP" style="color:{% if job.backpressure_active %}var(--amber){% else %}var(--neon){% endif %}">
+            {{ "ON" if job.backpressure_active else "OFF" }}
+        </div>
+        <div class="label">Back Pressure</div>
+    </div>
+</div>
+
+<!-- logs -->
+<h2>&#128221; Live Logs</h2>
+<div class="log-feed" id="logFeed">
+    {% for log in logs %}
+    <div class="log-line">
+        <span class="ts">{{ log.created_at }}</span>
+        <span class="lvl-{{ log.log_level }}">[{{ log.log_level }}]</span>
+        {{ log.message }}
+    </div>
+    {% endfor %}
+    {% if not logs %}
+    <div class="text-dim">Waiting for logs…</div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const JOB_ID = "{{ job.id }}";
+let polling = true;
+
+async function deleteJob() {
+    if (!confirm('Are you sure? This will delete the job and its indexed data.')) return;
+    try {
+        const resp = await fetch('/api/delete/' + JOB_ID, { method: 'POST' });
+        if (resp.ok) window.location.href = '/';
+        else { const d = await resp.json(); alert(d.error || 'Delete failed'); }
+    } catch(e) { alert('Network error'); }
+}
+
+async function ctrlAction(action) {
+    try {
+        const resp = await fetch('/api/' + action + '/' + JOB_ID, { method: 'POST' });
+        const data = await resp.json();
+        if (resp.ok) location.reload();
+        else alert(data.error || 'Failed');
+    } catch(e) { alert('Network error'); }
+}
+
+async function poll() {
+    if (!polling) return;
+    try {
+        const resp = await fetch('/api/status/' + JOB_ID);
+        const data = await resp.json();
+        const job = data.job;
+        const qs = data.queue_stats || {};
+
+        // update stats
+        document.getElementById('sCrawled').textContent = job.pages_crawled;
+        document.getElementById('sQueued').textContent = job.pages_queued;
+        document.getElementById('sPending').textContent = qs.pending || 0;
+        document.getElementById('sProcessing').textContent = qs.processing || 0;
+        document.getElementById('sDone').textContent = qs.done || 0;
+        document.getElementById('sFailed').textContent = qs.failed || 0;
+
+        const bpEl = document.getElementById('sBP');
+        bpEl.textContent = job.backpressure_active ? 'ON' : 'OFF';
+        bpEl.style.color = job.backpressure_active ? 'var(--amber)' : 'var(--neon)';
+
+        // update badge
+        const badge = document.getElementById('badgeStatus');
+        badge.textContent = job.status.toUpperCase();
+        badge.className = 'badge badge-' + job.status + (job.status === 'running' ? ' pulse' : '');
+
+        // update controls based on current status
+        const controls = document.getElementById('controls');
+        if (job.status === 'running') {
+            controls.innerHTML =
+                '<button class="btn btn-outline btn-sm" onclick="ctrlAction(\'pause\')">Pause</button>' +
+                '<button class="btn btn-danger btn-sm" onclick="ctrlAction(\'stop\')">Stop</button>';
+        } else if (job.status === 'paused') {
+            controls.innerHTML =
+                '<button class="btn btn-primary btn-sm" onclick="ctrlAction(\'resume\')">Resume</button>' +
+                '<button class="btn btn-danger btn-sm" onclick="ctrlAction(\'stop\')">Stop</button>';
+        } else if (job.status === 'stopped' || job.status === 'failed') {
+            controls.innerHTML =
+                '<button class="btn btn-primary btn-sm" onclick="ctrlAction(\'resume\')">Resume</button>';
+        } else {
+            controls.innerHTML = '';
+        }
+        // always show delete button when not running
+        if (job.status !== 'running') {
+            controls.innerHTML += '<button class="btn btn-danger btn-sm" onclick="deleteJob()">Delete</button>';
+        }
+
+        // update logs
+        const feed = document.getElementById('logFeed');
+        if (data.logs && data.logs.length) {
+            feed.innerHTML = data.logs.map(l =>
+                '<div class="log-line">' +
+                '<span class="ts">' + l.created_at + '</span> ' +
+                '<span class="lvl-' + l.log_level + '">[' + l.log_level + ']</span> ' +
+                l.message + '</div>'
+            ).join('');
+        }
+
+        // stop polling if finished
+        if (['completed', 'failed', 'stopped'].includes(job.status)) {
+            polling = false;
+        }
+    } catch(e) { /* ignore */ }
+}
+
+setInterval(poll, 2000);
+</script>
+{% endblock %}

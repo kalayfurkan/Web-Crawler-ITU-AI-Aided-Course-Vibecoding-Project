@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Crawler — Start Indexing{% endblock %}
+
+{% block content %}
+<h1>&#9881; Start New Crawl</h1>
+
+<div class="card">
+    <form id="crawlForm">
+        <div class="form-row">
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label for="origin">Origin URL</label>
+                <input type="url" id="origin" name="origin" placeholder="https://example.com" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="depth">Max Depth (k)</label>
+                <input type="number" id="depth" name="k" value="2" min="0" max="10">
+            </div>
+            <div class="form-group">
+                <label for="maxRate">Max Rate (req/sec)</label>
+                <input type="number" id="maxRate" name="max_rate" value="5" min="0.1" max="50" step="0.1">
+            </div>
+            <div class="form-group">
+                <label for="maxQueue">Max Queue Depth</label>
+                <input type="number" id="maxQueue" name="max_queue_depth" value="1000" min="10" max="100000">
+            </div>
+            <div class="form-group">
+                <label for="maxUrls">Max URLs to Visit</label>
+                <input type="number" id="maxUrls" name="max_urls" value="0" min="0" max="100000">
+                <span class="text-dim text-sm">0 = unlimited</span>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Start Crawl</button>
+        <span id="formMsg" class="text-sm ml-2" style="margin-left:.8rem;"></span>
+    </form>
+</div>
+
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.5rem;">
+    <h2>&#128196; Previous Crawl Jobs</h2>
+    <button class="btn btn-danger btn-sm" onclick="clearAllData()">Clear All Data</button>
+</div>
+
+{% if jobs %}
+<div class="card" style="padding:0; overflow-x:auto;">
+    <table>
+        <thead>
+            <tr>
+                <th>Job ID</th>
+                <th>Origin</th>
+                <th>Depth</th>
+                <th>Status</th>
+                <th>Pages</th>
+                <th>Created</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for j in jobs %}
+            <tr>
+                <td class="mono text-sm"><a href="/status/{{ j.id }}">{{ j.id[:16] }}…</a></td>
+                <td><span class="truncate" title="{{ j.origin_url }}">{{ j.origin_url }}</span></td>
+                <td>{{ j.max_depth }}</td>
+                <td><span class="badge badge-{{ j.status }}">{{ j.status }}</span></td>
+                <td class="mono">{{ j.pages_crawled }}</td>
+                <td class="text-sm text-dim">{{ j.created_at }}</td>
+                <td style="display:flex; gap:.3rem;">
+                    <a href="/status/{{ j.id }}" class="btn btn-outline btn-sm">View</a>
+                    <button class="btn btn-danger btn-sm" onclick="deleteJob('{{ j.id }}')">Delete</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card empty-state">
+    <p class="text-dim">No crawl jobs yet. Start one above!</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function clearAllData() {
+    if (!confirm('This will delete ALL jobs and the entire search index. Are you sure?')) return;
+    try {
+        // Delete all jobs from DB
+        const jobsResp = await fetch('/api/jobs');
+        const jobsData = await jobsResp.json();
+        for (const job of jobsData.jobs) {
+            await fetch('/api/delete/' + job.id, { method: 'POST' });
+        }
+        // Clear storage files
+        await fetch('/api/clear_storage', { method: 'POST' });
+        location.reload();
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function deleteJob(jobId) {
+    if (!confirm('Are you sure? This will delete the job and its indexed data.')) return;
+    try {
+        const resp = await fetch('/api/delete/' + jobId, { method: 'POST' });
+        if (resp.ok) location.reload();
+        else { const d = await resp.json(); alert(d.error || 'Delete failed'); }
+    } catch(e) { alert('Network error'); }
+}
+
+document.getElementById('crawlForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const msg = document.getElementById('formMsg');
+    msg.textContent = 'Starting…';
+    msg.style.color = 'var(--neon)';
+
+    const body = {
+        origin: document.getElementById('origin').value,
+        k: parseInt(document.getElementById('depth').value),
+        max_rate: parseFloat(document.getElementById('maxRate').value),
+        max_queue_depth: parseInt(document.getElementById('maxQueue').value),
+        max_urls: parseInt(document.getElementById('maxUrls').value),
+    };
+
+    try {
+        const resp = await fetch('/index', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+            window.location.href = '/status/' + data.job_id;
+        } else {
+            msg.textContent = data.error || 'Error';
+            msg.style.color = 'var(--red)';
+        }
+    } catch (err) {
+        msg.textContent = 'Network error';
+        msg.style.color = 'var(--red)';
+    }
+});
+</script>
+{% endblock %}

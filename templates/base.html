@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Web Crawler{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* ── reset & base ─────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg:       #0a0a0f;
+            --bg2:      #12121a;
+            --bg3:      #1a1a28;
+            --neon:     #39ff14;
+            --neon-dim: #2bcc0f;
+            --neon-rgb: 57,255,20;
+            --text:     #d0d0d0;
+            --text2:    #888;
+            --red:      #ff1744;
+            --amber:    #ffab00;
+            --blue:     #40c4ff;
+            --radius:   8px;
+            --font:     'Space Grotesk', 'Segoe UI', sans-serif;
+            --mono:     'JetBrains Mono', Consolas, monospace;
+        }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        a { color: var(--neon); text-decoration: none; }
+        a:hover { text-shadow: 0 0 8px rgba(var(--neon-rgb),.6); }
+
+        /* ── nav ──────────────────────────────────────────────────── */
+        nav {
+            background: var(--bg2);
+            border-bottom: 1px solid rgba(var(--neon-rgb),.25);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            height: 56px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 20px rgba(0,0,0,.5);
+        }
+        nav .brand {
+            font-family: var(--mono);
+            font-weight: 700;
+            font-size: 1.15rem;
+            color: var(--neon);
+            text-shadow: 0 0 12px rgba(var(--neon-rgb),.5);
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+        nav .brand span { font-size: 1.3rem; }
+        nav .links { display: flex; gap: 1.5rem; margin-left: auto; }
+        nav .links a {
+            color: var(--text);
+            font-size: .9rem;
+            font-weight: 500;
+            padding: .3rem .7rem;
+            border-radius: var(--radius);
+            transition: .2s;
+        }
+        nav .links a:hover,
+        nav .links a.active {
+            color: var(--neon);
+            background: rgba(var(--neon-rgb),.08);
+            text-shadow: 0 0 8px rgba(var(--neon-rgb),.4);
+        }
+
+        /* ── layout ──────────────────────────────────────────────── */
+        .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+        h1 {
+            font-family: var(--mono);
+            color: var(--neon);
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 15px rgba(var(--neon-rgb),.3);
+        }
+        h2 {
+            font-family: var(--mono);
+            color: var(--neon-dim);
+            font-size: 1.1rem;
+            margin: 1.5rem 0 .8rem;
+        }
+
+        /* ── card ─────────────────────────────────────────────────── */
+        .card {
+            background: var(--bg2);
+            border: 1px solid rgba(var(--neon-rgb),.15);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0 15px rgba(0,0,0,.4);
+        }
+        .card:hover {
+            border-color: rgba(var(--neon-rgb),.35);
+            box-shadow: 0 0 25px rgba(var(--neon-rgb),.08);
+        }
+
+        /* ── form ─────────────────────────────────────────────────── */
+        label {
+            display: block;
+            font-size: .85rem;
+            color: var(--text2);
+            margin-bottom: .3rem;
+            font-weight: 500;
+        }
+        input[type="text"], input[type="number"], input[type="url"], select {
+            width: 100%;
+            padding: .6rem .8rem;
+            background: var(--bg3);
+            border: 1px solid rgba(var(--neon-rgb),.2);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: .9rem;
+            outline: none;
+            transition: .2s;
+        }
+        input:focus, select:focus {
+            border-color: var(--neon);
+            box-shadow: 0 0 10px rgba(var(--neon-rgb),.2);
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .form-group { display: flex; flex-direction: column; }
+
+        /* ── buttons ──────────────────────────────────────────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .55rem 1.3rem;
+            border: none;
+            border-radius: var(--radius);
+            font-family: var(--font);
+            font-weight: 600;
+            font-size: .85rem;
+            cursor: pointer;
+            transition: .2s;
+        }
+        .btn-primary {
+            background: var(--neon);
+            color: #0a0a0f;
+            box-shadow: 0 0 15px rgba(var(--neon-rgb),.3);
+        }
+        .btn-primary:hover {
+            background: #4dff33;
+            box-shadow: 0 0 25px rgba(var(--neon-rgb),.5);
+            transform: translateY(-1px);
+        }
+        .btn-outline {
+            background: transparent;
+            color: var(--neon);
+            border: 1px solid rgba(var(--neon-rgb),.4);
+        }
+        .btn-outline:hover {
+            background: rgba(var(--neon-rgb),.1);
+        }
+        .btn-danger {
+            background: rgba(255,23,68,.15);
+            color: var(--red);
+            border: 1px solid rgba(255,23,68,.3);
+        }
+        .btn-danger:hover { background: rgba(255,23,68,.25); }
+        .btn-sm { padding: .3rem .7rem; font-size: .78rem; }
+
+        /* ── table ────────────────────────────────────────────────── */
+        table { width: 100%; border-collapse: collapse; }
+        thead th {
+            text-align: left;
+            font-size: .78rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--neon);
+            padding: .6rem .8rem;
+            border-bottom: 1px solid rgba(var(--neon-rgb),.2);
+            font-family: var(--mono);
+        }
+        tbody td {
+            padding: .55rem .8rem;
+            font-size: .85rem;
+            border-bottom: 1px solid rgba(255,255,255,.04);
+            vertical-align: middle;
+        }
+        tbody tr:hover { background: rgba(var(--neon-rgb),.03); }
+
+        /* ── badges ───────────────────────────────────────────────── */
+        .badge {
+            display: inline-block;
+            padding: .15rem .55rem;
+            border-radius: 20px;
+            font-size: .72rem;
+            font-weight: 600;
+            font-family: var(--mono);
+            text-transform: uppercase;
+        }
+        .badge-running  { background: rgba(var(--neon-rgb),.15); color: var(--neon); box-shadow: 0 0 8px rgba(var(--neon-rgb),.2); }
+        .badge-completed{ background: rgba(var(--neon-rgb),.1);  color: var(--neon-dim); }
+        .badge-failed   { background: rgba(255,23,68,.12);  color: var(--red); }
+        .badge-paused   { background: rgba(255,171,0,.12);  color: var(--amber); }
+        .badge-stopped  { background: rgba(255,255,255,.08);color: var(--text2); }
+        .badge-queued   { background: rgba(64,196,255,.1);  color: var(--blue); }
+
+        /* ── stats grid ───────────────────────────────────────────── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: var(--bg3);
+            border: 1px solid rgba(var(--neon-rgb),.1);
+            border-radius: var(--radius);
+            padding: 1rem;
+            text-align: center;
+        }
+        .stat-card .value {
+            font-family: var(--mono);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--neon);
+            text-shadow: 0 0 10px rgba(var(--neon-rgb),.3);
+        }
+        .stat-card .label {
+            font-size: .75rem;
+            color: var(--text2);
+            margin-top: .3rem;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        /* ── log feed ─────────────────────────────────────────────── */
+        .log-feed {
+            background: var(--bg);
+            border: 1px solid rgba(var(--neon-rgb),.1);
+            border-radius: var(--radius);
+            padding: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: var(--mono);
+            font-size: .78rem;
+            line-height: 1.7;
+        }
+        .log-feed::-webkit-scrollbar { width: 6px; }
+        .log-feed::-webkit-scrollbar-track { background: var(--bg2); }
+        .log-feed::-webkit-scrollbar-thumb { background: rgba(var(--neon-rgb),.3); border-radius: 3px; }
+        .log-line { padding: .15rem 0; }
+        .log-line .ts { color: var(--text2); }
+        .log-line .lvl-INFO    { color: var(--neon); }
+        .log-line .lvl-WARNING { color: var(--amber); }
+        .log-line .lvl-ERROR   { color: var(--red); }
+
+        /* ── search results ───────────────────────────────────────── */
+        .result-item {
+            background: var(--bg2);
+            border: 1px solid rgba(var(--neon-rgb),.12);
+            border-radius: var(--radius);
+            padding: 1rem 1.2rem;
+            margin-bottom: .8rem;
+            transition: .2s;
+        }
+        .result-item:hover {
+            border-color: rgba(var(--neon-rgb),.3);
+            box-shadow: 0 0 15px rgba(var(--neon-rgb),.06);
+        }
+        .result-url {
+            font-family: var(--mono);
+            font-size: .9rem;
+            color: var(--neon);
+            word-break: break-all;
+        }
+        .result-meta {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: .4rem;
+            font-size: .78rem;
+            color: var(--text2);
+        }
+        .result-meta span strong { color: var(--text); }
+
+        /* ── pulse animation ──────────────────────────────────────── */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: .5; }
+        }
+        .pulse { animation: pulse 2s infinite; }
+
+        /* ── responsive ───────────────────────────────────────────── */
+        @media (max-width: 640px) {
+            nav { padding: 0 1rem; gap: 1rem; }
+            .container { padding: 1rem; }
+            .form-row { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* ── utility ──────────────────────────────────────────────── */
+        .mt-1 { margin-top: .5rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-3 { margin-top: 1.5rem; }
+        .text-neon { color: var(--neon); }
+        .text-dim  { color: var(--text2); }
+        .text-sm   { font-size: .82rem; }
+        .mono      { font-family: var(--mono); }
+        .truncate  { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 320px; display: inline-block; vertical-align: bottom; }
+        .empty-state { text-align: center; padding: 3rem; color: var(--text2); }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav>
+        <div class="brand"><span>&#9784;</span> WebCrawler</div>
+        <div class="links">
+            <a href="/" class="{% if request.path == '/' %}active{% endif %}">Crawler</a>
+            <a href="/status" class="{% if '/status' in request.path %}active{% endif %}">Status</a>
+            <a href="/search" class="{% if '/search' in request.path %}active{% endif %}">Search</a>
+        </div>
+    </nav>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python app.py)",
+      "Bash(curl -s \"http://localhost:3600/search?query=python&sortBy=relevance\")",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s http://localhost:3600/api/status/1774302869_cff9674d)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); j=d[''''job'''']; print\\(f''''Status: {j[\"\"status\"\"]}, Crawled: {j[\"\"pages_crawled\"\"]}, Queued: {j[\"\"pages_queued\"\"]}, BP: {j[\"\"backpressure_active\"\"]}''''\\)\")",
+      "Bash(curl -s -X POST http://localhost:3600/api/stop/1774302869_cff9674d)",
+      "Bash(pkill -f \"python app.py\")",
+      "Bash(mysql -u root -plolzedcr7 -e \"DROP DATABASE IF EXISTS web_crawler;\")",
+      "Bash(rm -rf \"c:/Users/Furkan/Desktop/crawler/data/storage/\"*.data)",
+      "Bash(curl -s -X POST http://localhost:3600/index -H \"Content-Type: application/json\" -d '{\"\"origin\"\": \"\"https://docs.python.org/3/tutorial/index.html\"\", \"\"k\"\": 2, \"\"max_rate\"\": 5, \"\"max_queue_depth\"\": 500}')",
+      "Bash(curl -s http://localhost:3600/api/status/1774304453_3baa0e68)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); j=d[''''job'''']; qs=d.get\\(''''queue_stats'''',{}\\); print\\(f''''Status: {j[\"\"status\"\"]}\\\\nCrawled: {j[\"\"pages_crawled\"\"]}\\\\nQueued: {j[\"\"pages_queued\"\"]}\\\\nBP: {j[\"\"backpressure_active\"\"]}\\\\nPending: {qs.get\\(\"\"pending\"\",0\\)}\\\\nDone: {qs.get\\(\"\"done\"\",0\\)}''''\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); j=d[''''job'''']; qs=d.get\\(''''queue_stats'''',{}\\); print\\(f''''Status: {j[\"\"status\"\"]}\\\\nCrawled: {j[\"\"pages_crawled\"\"]}\\\\nPending: {qs.get\\(\"\"pending\"\",0\\)}\\\\nDone: {qs.get\\(\"\"done\"\",0\\)}''''\\)\")",
+      "Bash(python -c \":*)",
+      "Bash(curl -s -X POST http://localhost:3600/api/stop/1774304453_3baa0e68)",
+      "Bash(rm -f data/storage/*.data)",
+      "Bash(curl -s http://localhost:3600/api/status/1774304796_7c143a0e)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); j=d[''''job'''']; qs=d.get\\(''''queue_stats'''',{}\\); print\\(f''''Status: {j[\"\"status\"\"]}\\\\nCrawled: {j[\"\"pages_crawled\"\"]}\\\\nQueued: {j[\"\"pages_queued\"\"]}\\\\nBP: {j[\"\"backpressure_active\"\"]}\\\\nPending: {qs.get\\(\"\"pending\"\",0\\)}\\\\nDone: {qs.get\\(\"\"done\"\",0\\)}\\\\nFailed: {qs.get\\(\"\"failed\"\",0\\)}''''\\)\")",
+      "Bash(netstat -ano)",
+      "Bash(taskkill //PID 11676 //F)",
+      "Bash(taskkill //PID 12540 //F)",
+      "Bash(taskkill //PID 4720 //F)",
+      "Bash(curl -s http://localhost:3600/api/status/1774305144_14415a2d)",
+      "Bash(curl -s http://localhost:3600/)",
+      "Bash(curl -s \"http://localhost:3600/search?query=ortaklar+fen+lisesi&sortBy=relevance\")",
+      "Bash(curl -s \"http://localhost:3600/search?query=ortaklar+fen+lisesi&sortBy=relevance&per_page=100\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''Total:'''', d[''''total_results'''']\\); [print\\(f\"\"  #{i+1} score={r[''''relevance_score'''']} words={r[''''matched_words'''']} url={r[''''relevant_url''''][:60]}\"\"\\) for i,r in enumerate\\(d[''''results''''][:30]\\)]\")",
+      "Bash(curl -s \"http://localhost:3600/search?query=ortaklar&sortBy=relevance\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''Total:'''', d[''''total_results'''']\\); [print\\(f''''  #{i+1} score={r[\"\"relevance_score\"\"]} url={r[\"\"relevant_url\"\"][:60]}''''\\) for i,r in enumerate\\(d[''''results''''][:5]\\)]\")",
+      "Bash(curl -s -X POST http://localhost:3600/index -H \"Content-Type: application/json\" -d '{\"\"origin\"\":\"\"https://en.wikipedia.org/wiki/New_York_City\"\",\"\"k\"\":1,\"\"max_rate\"\":3,\"\"max_urls\"\":15}')",
+      "Bash(curl -s \"http://localhost:3600/search?query=new+york+city&sortBy=relevance\")",
+      "Bash(curl -s \"http://localhost:3600/search?query=ilber&sortBy=relevance\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f''''Total: {d[\"\"total_results\"\"]}''''\\); [print\\(f''''  #{i+1} score={r[\"\"relevance_score\"\"]} url={r[\"\"relevant_url\"\"][:60]}''''\\) for i,r in enumerate\\(d[''''results''''][:5]\\)]\")",
+      "Bash(pip install:*)",
+      "Bash(curl -s http://localhost:3600/api/jobs)",
+      "Bash(python -c \"import sys,json; print\\(json.load\\(sys.stdin\\)\\)\")"
+    ]
+  }
+}

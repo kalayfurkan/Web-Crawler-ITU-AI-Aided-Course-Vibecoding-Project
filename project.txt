@@ -1,0 +1,251 @@
+Ödev Açıklaması
+The task is to create a web crawler that exposes two distinct capabilities. For the purposes of this exercise we can assume index is invoked before search, but we will be interested to hear your thoughts on how this system could be designed such that search can be invoked while the indexer is active. To the greatest extent possible please use language-native functionality rather than fully featured libraries that do the core work of the exercise out of the box.
+
+ 
+
+
+index: Given a URL, initiate a web crawl to at most depth k, ensuring that you never crawl the same page twice. This method accepts two parameters, origin and k, where origin is a URL from which to initiate a web crawl and k is defined as the number of hops between origin and a newly discovered link. Please design around the assumption the scale of the crawl is very large but does not require multiple machines to run. The indexer should include some notion of back pressure — e.g. a maximum rate of work or queue depth — so the system can manage load in a controlled way.
+
+
+
+search: Given a query, return all relevant URLs. This method accepts as input a string, query, and returns a list of triples, where each triple takes the form (relevant_url, origin_url, depth). relevant_url is the URL of an indexed web page relevant to query, and origin and depth define parameters passed to /index for which relevant_url was discovered. Search should be able to run while indexing is still active, reflecting new results as they are discovered. Feel free to make reasonable assumptions about the definition of relevancy for the purposes of this method.
+
+
+ 
+In addition, provide a simple UI or CLI that makes it easy to:
+
+
+initiate indexing and search,
+
+
+
+view the state of the system (e.g. indexing progress, queue depth, back pressure status).
+
+
+ 
+
+It is a plus (but not required) if the system can be resumed after interruption without starting from scratch.
+
+Your work will be evaluated in terms of scalability, attention to detail, and overall architectural sensibility. Given the timeframe for this project (3–5 hours) we prefer to see thoughtfully crafted code that works within a reasonable set of assumptions rather than an expansive, half-realized vision for what might be.
+
+With your submission, please include a brief written description (1–2 paragraphs tops) of your recommendations for next steps for deploying this crawler into a production environment.
+
+Feel free to reach out with any questions, and we look forward to seeing what you build!
+
+
+
+
+
+—
+
+Technology Options
+
+
+Project should be run on localhost (including DB)
+
+
+
+IDE / CLI to be used
+
+
+
+VS Code
+
+
+
+Claude Code 
+
+
+
+Cursor
+
+
+
+Chatgpt Codex
+
+
+
+Github
+
+
+ 
+Output
+
+
+PRD - for AI to build the project 
+
+
+
+Github repository 
+
+
+
+Readme - how the project works (not for AI) (readme.md)
+
+
+
+PRD - inside github project (product_prd.md)
+
+
+
+Recommendation - inside github project (recommendation.md)
+
+
+
+Localhost runnable
+
+
+ 
+
+Example Outputs:
+
+ 
+
+
+https://github.com/ereneld/crawler 
+
+
+
+Demo Video 1 
+
+
+
+Demo Video 2 (continuation due to 5 min limit)
+
+
+
+Project Document
+
+
+This is a quick project for Brightwave which is a basic crawler and search capabilities based on the initial requirements.
+The site has 3 main pages:
+Crawler
+Crawler status
+Search
+The Crawler page allows users to create crawler jobs with a given origin URL and depth, along with other optional parameters and limits defined in the API section. When the user clicks the crawl button, a new thread is created to start crawling the initial page at the specified depth, performing the crawler operation as defined below. After creating a crawler, users can see its status, whether it's still running or finished. During or after completion, a small link will direct users to the crawler's current status based on its ID. Additionally, the crawler page will display the status of previous crawler operations below, ordered by time, with links to view the results of each operation.
+
+The Crawler status page allows users to view the current status of each crawler operation. It uses long polling to display state logs and provide key insights. If the operation is completed or interrupted, it will be noted at the top of the page.
+
+The Search page allows users to search with a query. The query will be parsed into text, and results will be returned based on the maximum hits from the filesystem, showing the URL, origin URL, and depth relevant to the search.
+
+Crawler Job (Major Component)
+
+This is the core of this project. It receives a URL and depth, along with optional parameters such as hit rate, number of pages to visit per second, and queue capacity (which defines when to pause based on queued URL pages).
+
+The crawler starts if all input parameters are valid. It creates a new thread to perform the job. The thread ID will be used to create the crawler ID, combined with the creation time. The crawler ID will be in the format of [EpochTimeCreated_ThreadID], where "Time created" is the epoch time and "Thread ID" is the system-defined thread ID. As soon as the crawler ID is defined, the thread creates a file named "[crawlerId].data" that holds the crawler's status, including all logs and other details in JSON format. A crawler thread begins by reading "visited_urls.data." If the file does not exist, an empty "visited_urls.data" file is created. This file stores each URL on a new line, allowing the crawler to check each new URL and skip it if it has already been visited. If the origin page has not been visited, the thread executes a curl command to read the HTML page. If the status is 200, it means the crawler successfully retrieved the page and continues; otherwise, it logs the error and stops. When the crawler obtains a valid HTML page source, it retrieves the word counter (text and frequency) and a list of other URL pages. At this point, the pages are stored as visited pages, and each word is stored by its initial letter (e.g., "[letter].data") under the "storage" folder, along with its corresponding origin URL, current URL, current depth value, and frequency count. The current list of URLs to visit is stored inside [crawlerId].data.
+
+Search (Minor Component)
+
+When a crawler job is completed, it stores each word by its initial letter in "[letter].data." So, when a user enters a query and clicks search, each word is checked against the files in the filesystem based on its initial letter, and each word is sorted by its frequency number. The results are then returned to the frontend with pagination.
+
+Future
+For the future, I believe many things can be added and changed for production.
+Storage needs to change to DB.
+For crawler data (data, queue, logs), any key-value store would work. Since we don't perform any SQL operations and the data will be mainly used for reading, it's better to stick with NoSQL.
+For visited_urls, I think that should also be in a NoSQL database with a daily batch process to add them to a system like BigQuery (SQL). This would allow us to track changes and updates and use analytics later for each visited_urls.
+For words, these should be stored in a specific tree system (Trie). I used the first letter, but it should be properly stored in a Trie structure. It can be scaled by using a chunk of words as the root for the main Trie and distributing them among each Node, essentially sharding based on chunks of words or selected roots based on usage or the number of elements. Since it will be mainly used for reading, we should utilize memory as much as possible and cache the most relevant words with their associated URL, origin, and depth information.
+Scaling
+The entire system can be scaled horizontally, from the database to the jobs (workers). The current project uses a single computer (node) with a filesystem. However, when crawler and search capabilities are needed in production, these two areas should be scaled separately. Search will consume the output of the crawler, and the crawler will perform isolated operations for each region.
+Search should be scaled in a manner suitable for a product, incorporating graceful failures and all necessary mechanisms so users are not bothered or do not see underlying issues. Search's main promise is availability and speed.
+On the crawler side, besides functional improvements, the worker logic should be separated between nodes distributed across regions to address various security and compliance reasons. Crawlers' main promises will be speed and consistency.
+Crawler limitations
+I implemented a few limitations and restricted crawler operation to a single computer. If we can leverage nodes separately and create a mechanism to spawn a new thread every time we hit a queue limit, it would dramatically speed things up. So, a crawler job will be a thread that spawns new threads based on the need for URL limits, either near the limit or at the limit. Then, we can add constraints based on CPU/memory usage, as well as throttling for security and politeness when re-visiting pages. Currently, if we visit a page, it won't be visited again since it's stored in the visitedurls file, but in a production environment, any URL can be visited again after some time, e.g., 5 seconds.
+Search optimization
+In a production environment, many other factors should be considered, such as PageRank, the relevance of each word, understanding sentences, etc., and also fuzzy words (e.g., misspellings).
+Monitoring / Observability
+In a production environment, both the search and crawler components should have two separate monitoring systems and needs.
+For search:
+Success metrics: daily/monthly usage (DAU/MAU), click-through rate, bounce ratio.
+Other metrics to track: availability, speed (time to deliver the initial screen/results to the user, etc.).
+For crawlers:
+Success metrics: daily/hourly number of unique pages crawled, delay in capturing updates, pages that need to be crawled.
+Other metrics to track: number of nodes actively in use.
+For admin:
+Success metrics: cost for each part of the system.
+Other metrics to track: number of nodes, database size, etc.
+Configs / Security / Compliance / Others
+Centralized configurations for each part of the system for each product requirement.
+Rate limiting and throttling for our search usages, tracking bad users, avoiding DDoS attacks, and hiding all crawling activity from the outside world.
+All data should be stored based on compliance.
+I'm sure I could spend at least 1-2 days listing all the things to do. These are the things I came up with within a reasonable amount of time (under 30 minutes).
+
+
+Build Google in an Afternoon
+The task is to create a web crawler that exposes two distinct capabilities. For the purposes of this exercise we can assume index is invoked before search, but we will be interested to hear your thoughts on how this system could be designed such that search can be invoked while the indexer is active. To the greatest extent possible please use language-native functionality rather than fully featured libraries that do the core work of the exercise out of the box.
+index: Given a URL, initiate a web crawl to at most depth k, ensuring that you never crawl the same page twice. This method accepts two parameters, origin and k, where origin is a URL from which to initiate a web crawl and k is defined as the number of hops between origin and a newly discovered link. Please design around the assumption the scale of the crawl is very large but does not require multiple machines to run. The indexer should include some notion of back pressure — e.g. a maximum rate of work or queue depth — so the system can manage load in a controlled way.
+search: Given a query, return all relevant URLs. This method accepts as input a string, query, and returns a list of triples, where each triple takes the form (relevant_url, origin_url, depth). relevant_url is the URL of an indexed web page relevant to query, and origin and depth define parameters passed to /index for which relevant_url was discovered. Search should be able to run while indexing is still active, reflecting new results as they are discovered. Feel free to make reasonable assumptions about the definition of relevancy for the purposes of this method.
+In addition, provide a simple UI or CLI that makes it easy to:
+initiate indexing and search,
+view the state of the system (e.g. indexing progress, queue depth, back pressure status).
+It is a plus (but not required) if the system can be resumed after interruption without starting from scratch.
+Your work will be evaluated in terms of scalability, attention to detail, and overall architectural sensibility. Given the timeframe for this project (3–5 hours) we prefer to see thoughtfully crafted code that works within a reasonable set of assumptions rather than an expansive, half-realized vision for what might be.
+With your submission, please include a brief written description (1–2 paragraphs tops) of your recommendations for next steps for deploying this crawler into a production environment.
+
+
+Project 1: Google in a day
+The Challenge
+Build a functional web crawler and real-time search engine from scratch.
+The Shift
+You are no longer just a "coder", you are a System Architect steering AI
+agents (Cursor, Claude, VS Code) to build complex, concurrent software.
+The Goal
+Demonstrate architectural sensibility, concurrency management, and
+"Human-in-the-Loop" verification.
+9
+Technical Requirements (Indexer)
+Recursive Crawling
+Initiate from an origin URL to a maximum depth k.
+Uniqueness
+Implement a "Visited" set to ensure no page is crawled twice.
+Back Pressure
+The system must manage its own load (e.g., max rate of work or queue depth).
+Native Focus / Constraint
+You must prompt the AI to use language-native functionality (e.g., net/http or urllib)
+rather than high-level libraries like Scrapy or Beautiful Soup.
+10
+Technical Requirements (Searcher)
+Query Engine
+Return a list of triples: (relevant_url, origin_url, depth).
+Live Indexing
+Search must be able to run while the indexer is active.
+Concurrency
+Use AI to design thread-safe data structures (e.g., Mutexes, Channels, or Concurrent
+Maps) to prevent data corruption.
+Relevancy
+Define a simple heuristic (e.g., keyword frequency or title matching) to rank results.
+11
+The AI-Augmented Workflow (cheatsheet)
+Phase 1 (PRD)
+Use Claude / ChatGPT / Gemini to expand this brief into a formal Product
+Requirement Document.
+Phase 2 (Design)
+Use Cursor/Composer to map out the system architecture before writing logic.
+Phase 3 (Prompting)
+Use User Profile Prompting (e.g., .cursorrules) to set coding standards and
+constraints.
+Phase 4 (Iterative Coding)
+Build the core crawler first, then the search interface, then the UI.
+12
+System Visibility & UI
+UI/CLI Requirements
+You must build a dashboard to view the state of the system in real-time.
+Metrics to Track:
+● Current Indexing Progress (URLs processed vs. queued).
+● Current Queue Depth.
+● Back-pressure/Throttling status.
+Persistence (Bonus)
+Design the system so it can be resumed after an interruption without restarting the
+crawl.
+13
+What Success Looks Like
+Functionality (40%): Does it crawl accurately and search concurrently?
+Architectural Sensibility (40%): How well did you handle back pressure and thread safety?
+AI Stewardship (20%): Can you explain the AI-generated code and justify the design choices?
+Final Output:
+● Final-4: Code, Readme, PRD, Recommendation
+● Working Codebase (Github public repository) including:
+○ Readme (readme.md)
+○ PRD as markdown (product_prd.md)
+○ A 2-paragraph Production Roadmap:
+■ Recommendations for deploying this into a high-scale production environment.
+(recommendation.md)
