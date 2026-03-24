@@ -113,6 +113,7 @@ curl -X POST http://localhost:3600/index \
 | `max_rate`        | Max HTTP requests per second                   | `5`     |
 | `max_queue_depth` | Queue depth threshold for back-pressure        | `1000`  |
 | `max_urls`        | Stop after visiting this many pages (0 = no limit) | `0` |
+<img width="1919" height="833" alt="image" src="https://github.com/user-attachments/assets/bca22982-234f-4de3-a10b-e33e29829952" />
 
 ### 2. Search Indexed Pages
 
@@ -141,6 +142,7 @@ Response:
   ]
 }
 ```
+<img width="1918" height="957" alt="image" src="https://github.com/user-attachments/assets/114409a5-6de2-44e7-af59-bcc9a3432b2b" />
 
 **Relevance scoring (3 layers):**
 
@@ -155,6 +157,9 @@ Response:
 - **Dashboard:** http://localhost:3600/status — all jobs overview
 - **Job Detail:** http://localhost:3600/status/{job_id} — live-updating progress, queue stats, back-pressure status, and logs
 - **Controls:** Pause / Resume / Stop / Delete buttons available on each job
+
+- <img width="1919" height="963" alt="image" src="https://github.com/user-attachments/assets/700b8c55-7ce7-45e5-bc5e-84091c764199" />
+
 
 ### 4. Resume After Interruption
 
